@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000408">
+<title>NEXUS-ΩX // QUANTUM OPTICS v6</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&family=Electrolize&display=swap');
+
+:root {
+  --q:#00f5c4; --q2:#00c8ff; --q3:#7b2fff;
+  --fire:#ff3a5c; --amb:#ffb000; --lime:#a8ff00;
+  --bg:#000408; --bg2:rgba(0,8,18,0.97); --br:rgba(0,245,196,0.14);
+  --gq:0 0 6px #00f5c4,0 0 18px rgba(0,245,196,0.35),0 0 40px rgba(0,245,196,0.1);
+  --gq2:0 0 6px #00c8ff,0 0 18px rgba(0,200,255,0.35);
+  --gfire:0 0 8px #ff3a5c,0 0 20px rgba(255,58,92,0.4);
+  --gamb:0 0 6px #ffb000,0 0 16px rgba(255,176,0,0.35);
+  --glime:0 0 6px #a8ff00,0 0 16px rgba(168,255,0,0.35);
+  --f:'Space Mono',monospace; --fs:'Syncopate',sans-serif; --fe:'Electrolize',monospace;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;height:100dvh;overflow:hidden;background:var(--bg);}
+body{
+  font-family:var(--f);color:var(--q);
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 3px);
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:9996;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 40%,transparent 40%,rgba(0,0,8,0.55) 100%);
+}
+
+#globalCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+.cockpit{
+  width:100%;height:100%;height:100dvh;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1;
+}
+
+/* ═══ TOP BAR ═══ */
+.topbar{
+  flex-shrink:0;height:46px;
+  background:linear-gradient(180deg,rgba(0,245,196,0.06) 0%,var(--bg2) 100%);
+  border-bottom:1px solid var(--br);
+  display:flex;align-items:center;padding:0 12px;gap:8px;position:relative;
+}
+.topbar::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--q) 25%,var(--q2) 50%,var(--q) 75%,transparent);
+  box-shadow:var(--gq);opacity:0.7;
+}
+.sys-id{
+  font-family:var(--fs);font-size:9px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(120deg,var(--q),var(--q2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  white-space:nowrap;flex-shrink:0;
+}
+.status-chips{display:flex;gap:5px;flex:1;justify-content:center;min-width:0;overflow:hidden;}
+.schip{
+  display:flex;align-items:center;gap:4px;
+  font-family:var(--fe);font-size:7px;letter-spacing:1.5px;
+  padding:3px 8px;border:1px solid currentColor;position:relative;overflow:hidden;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);flex-shrink:1;
+}
+.schip::before{content:'';position:absolute;inset:0;background:currentColor;opacity:0.06;}
+.schip.live{color:var(--lime);animation:livePulse 2s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{box-shadow:none;}50%{box-shadow:var(--glime);}}
+.schip.warn{color:var(--amb);}
+.schip.ai{color:var(--q3);}
+.schip .sdot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;animation:blink 1s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.hclock{font-family:var(--fe);font-size:12px;letter-spacing:2px;color:var(--q);text-shadow:var(--gq);white-space:nowrap;flex-shrink:0;}
+
+/* ═══ VIEWFINDER ═══ */
+.vf{flex:1;position:relative;overflow:hidden;min-height:0;background:#000;}
+video#camFeed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:0;transition:opacity 0.8s;}
+
+/* Permission */
+#permScreen{
+  position:absolute;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:radial-gradient(ellipse at 50%,rgba(0,20,40,0.95),rgba(0,4,8,0.99));cursor:pointer;
+}
+.perm-ring{
+  width:72px;height:72px;border-radius:50%;
+  border:2px solid var(--q);box-shadow:var(--gq),inset 0 0 20px rgba(0,245,196,0.1);
+  display:flex;align-items:center;justify-content:center;position:relative;
+  animation:permBreath 2s ease-in-out infinite;
+}
+.perm-ring::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(0,245,196,0.2);animation:permBreath 2s ease-in-out infinite reverse;}
+@keyframes permBreath{0%,100%{transform:scale(1);opacity:0.7;}50%{transform:scale(1.08);opacity:1;}}
+.perm-icon{font-family:var(--fs);font-size:20px;color:var(--q);text-shadow:var(--gq);}
+.perm-title{font-family:var(--fs);font-size:9px;letter-spacing:4px;color:var(--q);text-shadow:var(--gq);}
+.perm-sub{font-family:var(--fe);font-size:8px;letter-spacing:2px;color:rgba(0,245,196,0.4);}
+
+.vf-env{
+  position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse 55% 40% at 30% 35%,rgba(0,90,70,0.08) 0%,transparent 65%),radial-gradient(ellipse 40% 55% at 75% 55%,rgba(0,55,110,0.06) 0%,transparent 60%);
+  transition:opacity 0.8s;
+}
+video#camFeed.active ~ .vf-env{opacity:0;}
+.vf-hex{
+  position:absolute;inset:0;opacity:0.025;pointer-events:none;z-index:2;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='90'%3E%3Cpath d='M26 0L52 15v30L26 60 0 45V15z' fill='none' stroke='%2300f5c4' stroke-width='0.4'/%3E%3Cpath d='M26 60L52 75v15H0V75z' fill='none' stroke='%2300f5c4' stroke-width='0.4'/%3E%3C/svg%3E");
+}
+
+/* Rings */
+.ring-sys{position:absolute;top:50%;left:50%;pointer-events:none;}
+.ring{position:absolute;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}
+.ring1{width:min(54vw,230px);height:min(54vw,230px);border:1px solid rgba(0,245,196,0.07);animation:rot 15s linear infinite;}
+.ring2{width:min(38vw,155px);height:min(38vw,155px);border:1px dashed rgba(0,200,255,0.11);animation:rot 9s linear infinite reverse;}
+.ring3{width:min(20vw,82px);height:min(20vw,82px);border:1px solid rgba(0,245,196,0.2);animation:rot 4s linear infinite;}
+@keyframes rot{to{transform:translate(-50%,-50%) rotate(360deg);}}
+.radar-sweep{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(72vw,310px);height:min(72vw,310px);border-radius:50%;background:conic-gradient(from 0deg,transparent 335deg,rgba(0,245,196,0.03) 352deg,rgba(0,245,196,0.11) 360deg);animation:sweep 3.5s linear infinite;pointer-events:none;}
+@keyframes sweep{to{transform:translate(-50%,-50%) rotate(360deg);}}
+
+/* Reticle */
+.reticle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(28vw,115px);height:min(20vw,82px);animation:retBreath 3s ease-in-out infinite;}
+@keyframes retBreath{0%,100%{opacity:1;transform:translate(-50%,-50%) scale(1);}50%{opacity:0.65;transform:translate(-50%,-50%) scale(0.97);}}
+.rc{position:absolute;border-color:var(--q);border-style:solid;box-shadow:var(--gq);}
+.rc.tl{top:-2px;left:-2px;width:16px;height:16px;border-width:2px 0 0 2px;}
+.rc.tr{top:-2px;right:-2px;width:16px;height:16px;border-width:2px 2px 0 0;}
+.rc.bl{bottom:-2px;left:-2px;width:16px;height:16px;border-width:0 0 2px 2px;}
+.rc.br{bottom:-2px;right:-2px;width:16px;height:16px;border-width:0 2px 2px 0;}
+.cdot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:var(--q);box-shadow:var(--gq);}
+.cdot::before,.cdot::after{content:'';position:absolute;background:rgba(0,245,196,0.5);box-shadow:var(--gq);}
+.cdot::before{width:32px;height:1px;top:50%;left:50%;transform:translate(-50%,-50%);}
+.cdot::after{width:1px;height:32px;top:50%;left:50%;transform:translate(-50%,-50%);}
+.cdot-gap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:#000;}
+
+/* Targets */
+.tgt{position:absolute;}
+.tgt-box{width:100%;height:100%;border:1px solid;position:relative;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);}
+.tgt.t1 .tgt-box{border-color:var(--amb);box-shadow:0 0 8px rgba(255,176,0,.22);}
+.tgt.t2 .tgt-box{border-color:var(--fire);box-shadow:0 0 8px rgba(255,58,92,.22);}
+.tgt-label{position:absolute;top:-18px;left:0;font-family:var(--fe);font-size:7px;letter-spacing:1px;display:flex;align-items:center;gap:3px;white-space:nowrap;}
+.tgt-dot{width:4px;height:4px;border-radius:50%;animation:blink 1s step-end infinite;}
+.t1 .tgt-dot{background:var(--amb);}.t2 .tgt-dot{background:var(--fire);}
+.t1 .tgt-label{color:var(--amb);}.t2 .tgt-label{color:var(--fire);}
+.tgt-corner{position:absolute;width:6px;height:6px;border-style:solid;}
+.t1 .tgt-corner{border-color:var(--amb);}.t2 .tgt-corner{border-color:var(--fire);}
+.tgt-corner.tl{top:-2px;left:-2px;border-width:2px 0 0 2px;}.tgt-corner.tr{top:-2px;right:-2px;border-width:2px 2px 0 0;}
+.tgt-corner.bl{bottom:-2px;left:-2px;border-width:0 0 2px 2px;}.tgt-corner.br{bottom:-2px;right:-2px;border-width:0 2px 2px 0;}
+.tgt-scan{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,currentColor,transparent);animation:tgtScan 2s linear infinite;opacity:0.6;}
+@keyframes tgtScan{0%{top:0;opacity:0;}15%{opacity:0.8;}85%{opacity:0.8;}100%{top:100%;opacity:0;}}
+.t1 .tgt-scan{color:var(--amb);}.t2 .tgt-scan{color:var(--fire);}
+
+.vf-corner{position:absolute;width:28px;height:28px;}
+.vf-corner.tl{top:0;left:0;border-top:2px solid rgba(0,245,196,0.22);border-left:2px solid rgba(0,245,196,0.22);}
+.vf-corner.tr{top:0;right:0;border-top:2px solid rgba(0,245,196,0.22);border-right:2px solid rgba(0,245,196,0.22);}
+.vf-corner.bl{bottom:0;left:0;border-bottom:2px solid rgba(0,245,196,0.22);border-left:2px solid rgba(0,245,196,0.22);}
+.vf-corner.br{bottom:0;right:0;border-bottom:2px solid rgba(0,245,196,0.22);border-right:2px solid rgba(0,245,196,0.22);}
+
+/* AF grid */
+.af-grid{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58%;height:52%;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;pointer-events:none;}
+.af-sq{margin:auto;width:10px;height:10px;border:1px solid rgba(0,245,196,0.14);}
+.af-sq.active{border-color:var(--q);box-shadow:var(--gq);animation:afBurst 0.5s ease-out;}
+@keyframes afBurst{0%{transform:scale(2);opacity:0;}100%{transform:scale(1);opacity:1;}}
+
+/* HUD overlays */
+.vhud{position:absolute;font-family:var(--fe);font-size:8px;letter-spacing:1px;line-height:1.9;}
+.vhud span{display:block;}
+.vhud.tl{top:10px;left:10px;}.vhud.tr{top:10px;right:10px;text-align:right;}
+.vhud.bl{bottom:10px;left:10px;}.vhud.br{bottom:10px;right:10px;text-align:right;}
+.vhud .dim{color:rgba(0,245,196,0.38);}.vhud .bright{color:var(--q);text-shadow:var(--gq);}
+.vhud .fir{color:var(--fire);}.vhud .vio{color:var(--q3);}
+.recdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--fire);box-shadow:var(--gfire);margin-right:4px;vertical-align:middle;animation:blink 1s step-end infinite;}
+
+/* Exposure meter */
+.exp-bar{position:absolute;left:8px;top:50%;transform:translateY(-50%);height:36%;width:14px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.exp-tick{font-family:var(--fe);font-size:6px;color:rgba(0,245,196,0.3);}
+.exp-scale{flex:1;width:2px;background:linear-gradient(to bottom,rgba(255,58,92,0.6),rgba(255,176,0,0.5),rgba(0,245,196,0.6),rgba(0,245,196,0.6),rgba(255,176,0,0.5),rgba(255,58,92,0.6));position:relative;border-radius:2px;}
+.exp-ptr{position:absolute;left:50%;transform:translateX(-50%);width:12px;height:2px;background:var(--amb);box-shadow:var(--gamb);top:42%;border-radius:1px;transition:top 0.4s ease;}
+
+/* Zoom bar */
+.zoom-bar{position:absolute;right:8px;top:50%;transform:translateY(-50%);height:36%;width:22px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
+.zoom-bar-label{font-family:var(--fe);font-size:6px;color:rgba(0,245,196,0.5);text-align:center;line-height:1.2;}
+.zoom-track{flex:1;width:3px;background:rgba(0,245,196,0.1);position:relative;border-radius:2px;overflow:hidden;}
+.zoom-fill{position:absolute;bottom:0;left:0;right:0;height:14%;background:linear-gradient(to top,var(--q),rgba(0,245,196,0.2));box-shadow:var(--gq);border-radius:2px;transition:height 0.3s;}
+/* tap zones on zoom bar */
+.zoom-up,.zoom-dn{
+  position:absolute;left:-8px;right:-8px;height:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--fe);font-size:8px;color:rgba(0,245,196,0.3);
+  transition:color 0.1s;
+}
+.zoom-up{top:0;border-bottom:1px solid rgba(0,245,196,0.1);}
+.zoom-dn{bottom:0;}
+.zoom-up:active,.zoom-dn:active{color:var(--q);}
+
+/* Flash overlays */
+.ai-burst{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:var(--q3);box-shadow:0 0 10px var(--q3);opacity:0;pointer-events:none;z-index:8;}
+.ai-burst.fire{animation:aiBurst 0.7s ease-out forwards;}
+@keyframes aiBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(1);}50%{opacity:0.6;transform:translate(-50%,-50%) scale(20);}100%{opacity:0;transform:translate(-50%,-50%) scale(35);}}
+.mode-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--fs);font-size:20px;letter-spacing:5px;color:var(--q);text-shadow:var(--gq);pointer-events:none;opacity:0;z-index:20;}
+.mode-flash.show{animation:mFlash 0.9s ease-out forwards;}
+@keyframes mFlash{0%{opacity:1;transform:translate(-50%,-50%) scale(0.8);}60%{opacity:1;transform:translate(-50%,-50%) scale(1.05);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1);}}
+.zoom-flash{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--fe);font-size:10px;letter-spacing:3px;color:var(--q2);text-shadow:var(--gq2);pointer-events:none;opacity:0;z-index:20;}
+.zoom-flash.show{animation:zFlash 1s ease-out forwards;}
+@keyframes zFlash{0%{opacity:1;}80%{opacity:1;}100%{opacity:0;}}
+.swipe-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;font-family:var(--fe);font-size:7px;letter-spacing:2px;color:rgba(0,245,196,0.2);pointer-events:none;white-space:nowrap;animation:hintFade 6s ease-out forwards;}
+@keyframes hintFade{0%{opacity:0;}10%{opacity:1;}80%{opacity:1;}100%{opacity:0;}}
+
+/* Flip button */
+#flipBtn{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10;cursor:pointer;
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;border:1px solid rgba(0,245,196,0.35);background:rgba(0,12,24,0.8);
+  box-shadow:0 2px 12px rgba(0,0,0,0.5);transition:all 0.15s;
+}
+#flipBtn:active{transform:translateX(-50%) scale(0.9);border-color:var(--q);box-shadow:var(--gq);}
+.flip-ring{width:20px;height:20px;border-radius:50%;border:2px solid var(--q);border-right-color:transparent;animation:flipSpin 8s linear infinite;filter:drop-shadow(0 0 3px var(--q));}
+@keyframes flipSpin{to{transform:rotate(360deg);}}
+
+/* Gallery thumb */
+#galleryThumb{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;width:38px;height:30px;border:1px solid rgba(0,245,196,0.4);background:rgba(0,0,0,0.6);overflow:hidden;display:none;box-shadow:var(--gq);}
+#thumbImg{width:100%;height:100%;object-fit:cover;}
+
+#edgeCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity 0.4s;}
+#edgeCanvas.active{opacity:1;}
+#isoGrain{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity 0.3s;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.5'/%3E%3C/svg%3E");mix-blend-mode:overlay;}
+#captureCanvas{display:none;}
+
+/* ═══ INFO RIBBON ═══ */
+.info-ribbon{
+  flex-shrink:0;height:38px;
+  background:linear-gradient(0deg,var(--bg2) 0%,rgba(0,10,22,0.98) 100%);
+  border-top:1px solid var(--br);border-bottom:1px solid var(--br);
+  display:flex;overflow:hidden;position:relative;z-index:9999;
+}
+.info-ribbon::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,245,196,0.5),transparent);box-shadow:var(--gq);}
+.iblk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--br);gap:1px;padding:0 1px;position:relative;overflow:hidden;min-width:0;}
+.iblk:last-child{border-right:none;}
+.ilbl{font-family:var(--fe);font-size:5px;letter-spacing:0.8px;color:rgba(0,245,196,0.3);line-height:1;white-space:nowrap;}
+.ival{font-family:var(--fs);font-size:10px;line-height:1;text-shadow:var(--gq);white-space:nowrap;}
+.ival.hot{color:var(--amb);text-shadow:var(--gamb);}
+.ival.fir{color:var(--fire);text-shadow:var(--gfire);}
+.ival.ok{color:var(--lime);text-shadow:var(--glime);}
+
+/* ═══ DATA ROW ═══ */
+.data-row{flex-shrink:0;height:72px;display:flex;background:rgba(0,5,14,0.98);border-bottom:1px solid var(--br);position:relative;z-index:9999;}
+.nx-blk{flex:1;padding:7px 8px;border-right:1px solid var(--br);overflow:hidden;position:relative;}
+.nx-blk:last-child{border-right:none;}
+.nx-blk::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--q2),transparent);opacity:0.3;}
+.nxlbl{font-family:var(--fe);font-size:6px;letter-spacing:2px;color:rgba(0,245,196,0.28);margin-bottom:3px;display:flex;align-items:center;gap:3px;}
+.nxlbl::before{content:'◈';color:var(--q);opacity:0.5;}
+.hist-wrap{display:flex;align-items:flex-end;gap:1px;height:42px;}
+.hb{flex:1;min-height:2px;border-radius:1px 1px 0 0;}
+.ch-row{display:flex;gap:2px;margin-top:2px;}
+.ch{flex:1;text-align:center;font-family:var(--fe);font-size:6px;padding:1px;border:1px solid;border-radius:1px;}
+.ch.r{border-color:rgba(255,80,80,0.3);color:#ff6666;}.ch.g{border-color:rgba(80,255,80,0.3);color:#50ff50;}.ch.b{border-color:rgba(80,160,255,0.3);color:#50a0ff;}
+.neural-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:42px;}
+.ng-c{background:rgba(0,245,196,0.03);border:1px solid rgba(0,245,196,0.08);position:relative;overflow:hidden;transition:all 0.3s;}
+.ng-c.act{background:rgba(0,245,196,0.11);border-color:rgba(0,245,196,0.4);box-shadow:inset 0 0 5px rgba(0,245,196,0.2);}
+.ng-c.hot{background:rgba(255,58,92,0.1);border-color:rgba(255,58,92,0.32);}
+.neural-vals{display:flex;justify-content:space-between;margin-top:2px;}
+.nv{font-family:var(--fe);font-size:6px;color:rgba(0,245,196,0.38);}.nv span{color:var(--q);}
+.therm-view{width:100%;height:46px;position:relative;overflow:hidden;background:radial-gradient(ellipse 35% 50% at 38% 35%,#ee1500,#ff5500 25%,#ffaa00 45%,transparent 65%),radial-gradient(ellipse 22% 32% at 70% 60%,#18004a,#3a0080 35%,transparent 55%),linear-gradient(135deg,#080018,#0c0030);}
+.therm-overlay{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 7px,rgba(0,0,0,0.05) 7px,rgba(0,0,0,0.05) 8px);}
+.therm-ring{position:absolute;border:1px solid;border-radius:50%;animation:thermP 2.5s ease-in-out infinite;}
+@keyframes thermP{0%,100%{opacity:0.5;}50%{opacity:1;}}
+.therm-lbl{position:absolute;top:2px;left:3px;font-family:var(--fe);font-size:6px;letter-spacing:1px;color:rgba(255,150,80,0.6);}
+.therm-temp{position:absolute;bottom:2px;right:3px;font-family:var(--fs);font-size:9px;color:var(--amb);text-shadow:var(--gamb);}
+.therm-row{display:flex;justify-content:space-between;margin-top:2px;}
+.therm-row span{font-family:var(--fe);font-size:6px;}
+
+/* ═══════════════════════════════════════
+   CONTROL ZONE — ISO dial | MODES | WB dial
+   ─ แตะ dial เพื่อเปิด panel  ─
+════════════════════════════════════════ */
+.ctrl-zone{
+  flex-shrink:0;height:52px;
+  background:var(--bg2);border-bottom:1px solid var(--br);
+  display:flex;align-items:center;padding:0 10px;gap:8px;overflow:hidden;
+  position:relative;z-index:9999;
+}
+/* subtle "tap me" pulse on dials */
+.dial-unit{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;}
+.dlbl{font-family:var(--fe);font-size:6px;letter-spacing:2px;color:rgba(0,245,196,0.3);}
+.dval{font-family:var(--fs);font-size:8px;color:var(--q);text-shadow:var(--gq);}
+
+.dial{
+  width:32px;height:32px;border-radius:50%;cursor:pointer;
+  background:radial-gradient(circle at 38% 38%,rgba(0,245,196,0.15),rgba(0,245,196,0.02) 70%);
+  border:1.5px solid rgba(0,245,196,0.45);
+  position:relative;
+  box-shadow:inset 0 0 10px rgba(0,0,0,0.6),0 0 8px rgba(0,245,196,0.12);
+  transition:border-color 0.2s,box-shadow 0.2s;
+  -webkit-user-select:none;user-select:none;
+  touch-action:none;
+  animation:dialPulse 3s ease-in-out infinite;
+}
+@keyframes dialPulse{0%,100%{box-shadow:inset 0 0 10px rgba(0,0,0,0.6),0 0 6px rgba(0,245,196,0.1);}50%{box-shadow:inset 0 0 10px rgba(0,0,0,0.6),0 0 14px rgba(0,245,196,0.28);}}
+.dial::before{content:'';position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(0,245,196,0.12);}
+.dial::after{
+  content:'';position:absolute;width:2px;height:10px;border-radius:2px;
+  background:linear-gradient(to bottom,var(--q),rgba(0,245,196,0.3));
+  box-shadow:var(--gq);top:4px;left:50%;transform:translateX(-50%);
+}
+.dial:active{border-color:var(--q);box-shadow:var(--gq);}
+/* "TAP" label under dial */
+.dtap{font-family:var(--fe);font-size:5px;letter-spacing:1px;color:rgba(0,245,196,0.22);margin-top:-1px;}
+
+/* Mode strip */
+.mode-strip{flex:1;display:flex;gap:3px;overflow-x:auto;padding:2px 2px;scrollbar-width:none;}
+.mode-strip::-webkit-scrollbar{display:none;}
+.mpill{
+  flex-shrink:0;cursor:pointer;
+  font-family:var(--fe);font-size:7.5px;letter-spacing:1px;
+  padding:7px 11px;
+  border:1px solid rgba(0,245,196,0.18);
+  color:rgba(0,245,196,0.38);
+  background:transparent;
+  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+  transition:all 0.18s;position:relative;overflow:hidden;
+  -webkit-user-select:none;user-select:none;
+  /* bigger tap target */
+  min-height:34px;display:flex;align-items:center;justify-content:center;
+}
+.mpill::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,245,196,0.08),transparent);opacity:0;transition:opacity 0.18s;}
+.mpill.active{color:var(--q);border-color:var(--q);background:rgba(0,245,196,0.07);box-shadow:var(--gq);}
+.mpill.active::before{opacity:1;}
+.mpill:active{background:rgba(0,245,196,0.15);border-color:var(--q);}
+
+/* ═══════════════════════════════════════
+   SHUTTER ROW
+════════════════════════════════════════ */
+.shutter-row{
+  flex-shrink:0;height:64px;
+  background:linear-gradient(0deg,rgba(0,2,10,0.99),rgba(0,8,20,0.98));
+  display:flex;align-items:center;justify-content:center;
+  padding:0 14px;position:relative;overflow:hidden;z-index:9999;
+}
+.shutter-row::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--q2) 30%,var(--q) 50%,var(--q2) 70%,transparent);
+  box-shadow:var(--gq2);animation:topShim 4s linear infinite;
+}
+@keyframes topShim{0%,100%{opacity:0.4;}50%{opacity:0.9;}}
+
+.shutter-left{position:absolute;left:14px;display:flex;align-items:center;gap:5px;}
+.filmstrip{display:flex;gap:2px;}
+.ff{width:28px;height:22px;border:1px solid rgba(0,245,196,0.14);overflow:hidden;transition:all 0.2s;}
+.ff.latest{border-color:var(--q);box-shadow:var(--gq);}
+.ff-inner{width:100%;height:100%;background:linear-gradient(135deg,rgba(0,35,25,0.7),rgba(0,20,40,0.7));}
+.fcount{font-family:var(--fe);font-size:7px;color:rgba(0,245,196,0.32);white-space:nowrap;}
+
+.shutter-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+.shutter-orbit{position:absolute;width:62px;height:62px;border-radius:50%;}
+.shutter-orbit::before{content:'';position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(0,245,196,0.18);animation:orbitSpin 10s linear infinite;}
+.shutter-orbit::after{content:'';position:absolute;top:-4px;left:50%;margin-left:-4px;width:8px;height:8px;border-radius:50%;background:var(--q);box-shadow:var(--gq);animation:orbitSpin 10s linear infinite;}
+@keyframes orbitSpin{to{transform:rotate(360deg);}}
+
+/* THE SHUTTER — large, clear, unmistakable */
+.shutter-btn{
+  width:48px;height:48px;border-radius:50%;
+  background:radial-gradient(circle at 38% 38%,rgba(0,245,196,0.22),rgba(0,245,196,0.04) 70%);
+  border:2.5px solid var(--q);
+  box-shadow:var(--gq),inset 0 0 18px rgba(0,245,196,0.06);
+  cursor:pointer;position:relative;z-index:1;
+  -webkit-appearance:none;appearance:none;
+  transition:all 0.1s;
+  -webkit-user-select:none;user-select:none;
+}
+.shutter-btn::before{content:'';position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(0,245,196,0.22);}
+.shutter-btn::after{content:'';position:absolute;inset:16px;border-radius:50%;background:rgba(0,245,196,0.07);box-shadow:inset 0 0 8px rgba(0,245,196,0.15);}
+.shutter-btn:active{transform:scale(0.9);box-shadow:0 0 50px var(--q),0 0 100px rgba(0,245,196,0.4),inset 0 0 18px rgba(0,245,196,0.06);}
+
+.shutter-stats{position:absolute;right:14px;display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
+.sstat{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.sslbl{font-family:var(--fe);font-size:6px;letter-spacing:1.5px;color:rgba(0,245,196,0.28);}
+.ssval{font-family:var(--fs);font-size:12px;text-shadow:var(--gq);}
+.ssval.fir{color:var(--fire);text-shadow:var(--gfire);}
+
+/* ═══ TOP STATUS ═══ */
+.statusbar{
+  flex-shrink:0;height:26px;
+  background:rgba(0,2,8,0.99);border-bottom:1px solid rgba(0,245,196,0.09);
+  display:flex;align-items:center;padding:0 8px;overflow:hidden;
+  position:relative;z-index:9999;
+}
+.stblk{
+  display:flex;align-items:center;gap:3px;
+  font-family:var(--fe);font-size:7px;letter-spacing:1px;
+  color:rgba(0,245,196,0.32);padding:0 6px;
+  border-right:1px solid rgba(0,245,196,0.09);white-space:nowrap;height:100%;
+}
+.stblk:last-child{border-right:none;margin-left:auto;}
+.stblk .sv{color:var(--q);}.stblk .sw{color:var(--amb);}
+.sigb{display:flex;align-items:flex-end;gap:2px;}
+.sb{width:3px;background:var(--q);border-radius:1px 1px 0 0;opacity:0.14;}
+.sb.on{opacity:1;box-shadow:0 0 3px var(--q);}
+.mbar{height:3px;width:32px;background:rgba(0,245,196,0.07);border-radius:2px;overflow:hidden;}
+.mbar-f{height:100%;border-radius:2px;transition:width 1s;}
+.mbar-f.ok{background:var(--q);box-shadow:0 0 4px var(--q);}
+.mbar-f.warn{background:var(--amb);box-shadow:0 0 4px var(--amb);}
+
+/* ═══ DIAL PANELS ═══ */
+.panel-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.55);display:none;}
+.panel-backdrop.active{display:block;}
+.dial-panel{
+  position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:linear-gradient(0deg,rgba(0,3,12,0.99),rgba(0,10,22,0.98));
+  border-top:1px solid var(--br);padding:16px 20px 24px;
+  transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.3,0,0.15,1);
+  pointer-events:none;clip-path:polygon(14px 0,100% 0,100% 100%,0 100%,0 14px);
+  touch-action:pan-y;
+}
+.dial-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--q) 30%,var(--q2) 50%,var(--q) 70%,transparent);box-shadow:var(--gq);}
+.dial-panel.open{transform:translateY(0);pointer-events:all;}
+.dp-title{font-family:var(--fs);font-size:8px;letter-spacing:3px;color:var(--q);text-shadow:var(--gq);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.dp-close{
+  font-family:var(--fe);font-size:11px;cursor:pointer;
+  border:1px solid rgba(0,245,196,0.25);padding:4px 12px;
+  clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);
+  color:rgba(0,245,196,0.5);transition:all 0.15s;
+  -webkit-user-select:none;user-select:none;
+}
+.dp-close:active{color:var(--q);border-color:var(--q);background:rgba(0,245,196,0.08);}
+.dp-slider-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.dp-slabel{font-family:var(--fe);font-size:7px;letter-spacing:1.5px;color:rgba(0,245,196,0.38);width:30px;flex-shrink:0;}
+.dp-slider{
+  flex:1;-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,var(--q) var(--pct,50%),rgba(0,245,196,0.1) var(--pct,50%));
+}
+.dp-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(0,245,196,0.45),rgba(0,245,196,0.07));border:1.5px solid var(--q);box-shadow:var(--gq);cursor:pointer;}
+.dp-sval{font-family:var(--fs);font-size:11px;color:var(--q);text-shadow:var(--gq);width:52px;text-align:right;flex-shrink:0;}
+.dp-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.dp-pill{
+  font-family:var(--fe);font-size:8px;letter-spacing:1px;padding:6px 12px;
+  border:1px solid rgba(0,245,196,0.18);cursor:pointer;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+  color:rgba(0,245,196,0.36);transition:all 0.15s;
+  -webkit-user-select:none;user-select:none;
+  min-height:34px;display:flex;align-items:center;
+}
+.dp-pill.active{color:var(--q);border-color:var(--q);background:rgba(0,245,196,0.08);box-shadow:var(--gq);}
+.dp-pill:active{background:rgba(0,245,196,0.14);}
+
+/* ── INTERACTIVE HELP OVERLAY ── */
+#helpOverlay{
+  position:fixed;inset:0;z-index:19999;
+  background:rgba(0,4,12,0.88);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:20px;
+  backdrop-filter:blur(4px);
+}
+.help-title{
+  font-family:var(--fs);font-size:10px;letter-spacing:4px;color:var(--q);text-shadow:var(--gq);
+  margin-bottom:18px;border-bottom:1px solid var(--br);width:100%;text-align:center;padding-bottom:12px;
+}
+.help-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:360px;
+}
+.help-item{
+  display:flex;gap:10px;align-items:flex-start;
+  border:1px solid rgba(0,245,196,0.12);padding:10px;
+  background:rgba(0,12,24,0.7);
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+}
+.help-icon{
+  font-size:20px;flex-shrink:0;width:28px;text-align:center;
+  filter:drop-shadow(0 0 4px var(--q));
+}
+.help-text{}
+.help-action{font-family:var(--fs);font-size:8px;letter-spacing:1px;color:var(--q);display:block;margin-bottom:3px;}
+.help-desc{font-family:var(--fe);font-size:7px;letter-spacing:0.5px;color:rgba(0,245,196,0.45);line-height:1.5;}
+.help-close{
+  margin-top:18px;
+  font-family:var(--fs);font-size:9px;letter-spacing:3px;
+  padding:10px 28px;border:1.5px solid var(--q);
+  color:var(--q);text-shadow:var(--gq);box-shadow:var(--gq);
+  cursor:pointer;
+  clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);
+  transition:all 0.15s;background:rgba(0,245,196,0.05);
+}
+.help-close:active{background:rgba(0,245,196,0.18);}
+
+/* help trigger button */
+#helpBtn{
+  position:fixed;top:80px;right:12px;z-index:9980;
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid rgba(0,245,196,0.3);background:rgba(0,10,22,0.9);
+  color:var(--q);font-family:var(--fs);font-size:11px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:var(--gq);
+  transition:all 0.15s;
+  -webkit-user-select:none;user-select:none;
+}
+#helpBtn:active{transform:scale(0.9);}
+
+/* EV color */
+#evVal{transition:color 0.4s;}
+#evVal.over{color:var(--fire);}#evVal.under{color:var(--q2);}#evVal.ok{color:var(--lime);}
+</style>
+</head>
+<body>
+
+<canvas id="globalCanvas"></canvas>
+
+<!-- ══ INTERACTIVE HELP OVERLAY (shows on first load) ══ -->
+<div id="helpOverlay">
+  <div class="help-title">◈ CONTROL GUIDE // NEXUS-ΩX</div>
+  <div class="help-grid">
+    <div class="help-item">
+      <div class="help-icon">⊙</div>
+      <div class="help-text">
+        <span class="help-action">กดปุ่มใหญ่กลาง</span>
+        <span class="help-desc">ปุ่ม SHUTTER วงกลมใหญ่ — กดถ่ายภาพ</span>
+      </div>
+    </div>
+    <div class="help-item">
+      <div class="help-icon">↔</div>
+      <div class="help-text">
+        <span class="help-action">ปัดซ้าย/ขวา ในกล้อง</span>
+        <span class="help-desc">เปลี่ยน MODE: RECON BURST STEALTH ฯลฯ</span>
+      </div>
+    </div>
+    <div class="help-item">
+      <div class="help-icon">↕</div>
+      <div class="help-text">
+        <span class="help-action">ปัดขึ้น/ลง ในกล้อง</span>
+        <span class="help-desc">ซูมเข้า/ออก 1× → 8×</span>
+      </div>
+    </div>
+    <div class="help-item">
+      <div class="help-icon">◎</div>
+      <div class="help-text">
+        <span class="help-action">แตะ dial ISO / WB</span>
+        <span class="help-desc">เปิด panel ปรับค่า — ลาก slider หรือกด pill</span>
+      </div>
+    </div>
+    <div class="help-item">
+      <div class="help-icon">⟲</div>
+      <div class="help-text">
+        <span class="help-action">กดวงกลมเล็กบนกลาง</span>
+        <span class="help-desc">สลับกล้องหน้า / กล้องหลัง</span>
+      </div>
+    </div>
+    <div class="help-item">
+      <div class="help-icon">＋ −</div>
+      <div class="help-text">
+        <span class="help-action">กดแถบ ZOOM ขวา</span>
+        <span class="help-desc">ครึ่งบน = ซูมเข้า / ครึ่งล่าง = ซูมออก</span>
+      </div>
+    </div>
+  </div>
+  <div class="help-close" onclick="document.getElementById('helpOverlay').style.display='none'">
+    ✓ เข้าใจแล้ว — เริ่มใช้งาน
+  </div>
+</div>
+
+<!-- ══ HELP BUTTON ══ -->
+<div id="helpBtn" onclick="document.getElementById('helpOverlay').style.display='flex'">?</div>
+
+<div class="cockpit">
+
+  <header class="topbar">
+    <div class="sys-id">NEXUS-ΩX</div>
+    <div class="status-chips">
+      <span class="schip live"><span class="sdot"></span>LIVE</span>
+      <span class="schip warn" id="chipEV">EV +0.0</span>
+      <span class="schip ai" id="chipAI">◈ NEURAL</span>
+    </div>
+    <div class="hclock" id="clock">--:--:--</div>
+  </header>
+
+  <!-- STATUS BAR — moved to top -->
+  <div class="statusbar">
+    <div class="stblk">PWR <span class="sv">87%</span><div class="mbar"><div class="mbar-f ok" id="pbar" style="width:87%"></div></div></div>
+    <div class="stblk">CPU <span class="sw">68°C</span><div class="mbar"><div class="mbar-f warn" id="tbar" style="width:68%"></div></div></div>
+    <div class="stblk">GPS <div class="sigb"><div class="sb on" style="height:4px;"></div><div class="sb on" style="height:7px;"></div><div class="sb on" style="height:10px;"></div><div class="sb on" style="height:13px;"></div><div class="sb" style="height:16px;"></div></div></div>
+    <div class="stblk">NET <span class="sv">94 Mb/s</span></div>
+    <div class="stblk">AI <span class="sv" id="aiPct">98.4%</span></div>
+    <div class="stblk" id="coordsbar">13.7563°N 100.5018°E</div>
+  </div>
+
+  <div class="vf" id="vf">
+    <video id="camFeed" autoplay playsinline muted></video>
+
+    <div id="permScreen" onclick="initCamera()">
+      <div class="perm-ring"><div class="perm-icon">⊙</div></div>
+      <div class="perm-title">QUANTUM OPTICS</div>
+      <div class="perm-sub">TAP TO ACTIVATE CAMERA</div>
+    </div>
+
+    <div class="vf-env"></div>
+    <div class="vf-hex"></div>
+    <div class="ring-sys">
+      <div class="ring ring1"></div>
+      <div class="ring ring2"></div>
+      <div class="ring ring3"></div>
+    </div>
+    <div class="radar-sweep"></div>
+
+    <div class="af-grid" id="afGrid">
+      <div class="af-sq" id="af00"></div><div class="af-sq" id="af01"></div><div class="af-sq" id="af02"></div>
+      <div class="af-sq" id="af10"></div><div class="af-sq active" id="af11"></div><div class="af-sq" id="af12"></div>
+    </div>
+
+    <div class="reticle">
+      <div class="rc tl"></div><div class="rc tr"></div>
+      <div class="rc bl"></div><div class="rc br"></div>
+    </div>
+    <div class="cdot-gap"></div>
+    <div class="cdot"></div>
+
+    <div class="tgt t1" style="width:46px;height:60px;top:24%;left:23%;">
+      <div class="tgt-label"><div class="tgt-dot"></div>TGT_01 · 4.2m</div>
+      <div class="tgt-box">
+        <div class="tgt-corner tl"></div><div class="tgt-corner tr"></div>
+        <div class="tgt-corner bl"></div><div class="tgt-corner br"></div>
+        <div class="tgt-scan"></div>
+      </div>
+    </div>
+    <div class="tgt t2" style="width:36px;height:48px;top:28%;left:60%;">
+      <div class="tgt-label"><div class="tgt-dot"></div>TGT_02 · 6.8m</div>
+      <div class="tgt-box">
+        <div class="tgt-corner tl"></div><div class="tgt-corner tr"></div>
+        <div class="tgt-corner bl"></div><div class="tgt-corner br"></div>
+        <div class="tgt-scan"></div>
+      </div>
+    </div>
+
+    <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+    <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+
+    <!-- Flip camera -->
+    <div id="flipBtn" onclick="flipCamera()" title="สลับกล้อง">
+      <div class="flip-ring"></div>
+    </div>
+
+    <div id="galleryThumb"><img id="thumbImg"/></div>
+    <canvas id="captureCanvas"></canvas>
+    <canvas id="edgeCanvas"></canvas>
+    <div id="isoGrain"></div>
+    <div class="ai-burst" id="aiPulse"></div>
+    <div class="mode-flash" id="modeFlash"></div>
+    <div class="zoom-flash" id="zoomFlash"></div>
+
+    <div class="exp-bar">
+      <div class="exp-tick">+</div>
+      <div class="exp-scale"><div class="exp-ptr" id="expPtr"></div></div>
+      <div class="exp-tick">−</div>
+    </div>
+
+    <!-- Zoom bar: top half = zoom in, bottom half = zoom out -->
+    <div class="zoom-bar" id="zoomIndicator">
+      <div class="zoom-bar-label" id="zoomLbl">1×</div>
+      <div class="zoom-track" id="zoomTrackEl">
+        <div class="zoom-fill" id="zoomFill"></div>
+        <div class="zoom-up" id="zoomUpBtn">＋</div>
+        <div class="zoom-dn" id="zoomDnBtn">－</div>
+      </div>
+    </div>
+
+    <div class="vhud tl">
+      <span class="bright" id="recStatus"><span class="recdot"></span>REC · 00:00:00</span>
+      <span class="dim" id="targetCount">0 TARGETS LOCKED</span>
+      <span class="vio">◈ NEURAL · <span id="neuralConf">98.4</span>%</span>
+    </div>
+    <div class="vhud tr">
+      <span class="bright" id="resLabel">-- × --</span>
+      <span class="dim" id="fpsLabel">-- FPS · LIVE</span>
+      <span class="dim" id="facingLabel">REAR CAM</span>
+    </div>
+    <div class="vhud bl">
+      <span class="dim" id="gpsLabel">-- GPS --</span>
+      <span class="bright">OIS 5-AXIS ●</span>
+    </div>
+    <div class="vhud br">
+      <span class="dim" id="storageLabel">STORAGE OK</span>
+      <span class="bright" id="shotcount">SHOT 0000</span>
+    </div>
+  </div>
+
+  <!-- INFO RIBBON -->
+  <div class="info-ribbon">
+    <div class="iblk"><span class="ilbl">APERTURE</span><span class="ival">f/2.8</span></div>
+    <div class="iblk"><span class="ilbl">SHUTTER</span><span class="ival hot">1/800</span></div>
+    <div class="iblk"><span class="ilbl">ISO</span><span class="ival" id="ribbonISO">400</span></div>
+    <div class="iblk"><span class="ilbl">EV COMP</span><span class="ival" id="evVal">+0.0</span></div>
+    <div class="iblk"><span class="ilbl">FOCUS</span><span class="ival ok">3.2m</span></div>
+    <div class="iblk"><span class="ilbl">DOF</span><span class="ival" style="font-size:9px;">0.8m</span></div>
+  </div>
+
+  <!-- DATA ROW -->
+  <div class="data-row">
+    <div class="nx-blk">
+      <div class="nxlbl">HISTOGRAM</div>
+      <div class="hist-wrap" id="hist"></div>
+      <div class="ch-row">
+        <div class="ch r">R<span id="chr">187</span></div>
+        <div class="ch g">G<span id="chg">204</span></div>
+        <div class="ch b">B<span id="chb">163</span></div>
+      </div>
+    </div>
+    <div class="nx-blk">
+      <div class="nxlbl">NEURAL MAP</div>
+      <div class="neural-grid" id="neural"></div>
+      <div class="neural-vals">
+        <span class="nv">CONF <span id="conf">98.4</span>%</span>
+        <span class="nv">OBJ <span>12</span></span>
+      </div>
+    </div>
+    <div class="nx-blk">
+      <div class="nxlbl">THERMAL</div>
+      <div class="therm-view">
+        <div class="therm-overlay"></div>
+        <div class="therm-ring" style="width:34px;height:38px;top:14%;left:26%;border-color:rgba(255,100,50,.5);"></div>
+        <div class="therm-ring" style="width:24px;height:26px;top:26%;left:58%;border-color:rgba(255,45,85,.4);animation-delay:.8s;"></div>
+        <div class="therm-lbl">FLIR 8–14μm</div>
+        <div class="therm-temp">36.4°C</div>
+      </div>
+      <div class="therm-row">
+        <span style="color:rgba(0,245,196,.32);">AMB 28.3°C</span>
+        <span style="color:var(--amb);">HEAT LOCK</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROL ZONE -->
+  <div class="ctrl-zone">
+    <div class="dial-unit">
+      <span class="dlbl">ISO</span>
+      <div class="dial" id="diso" style="transform:rotate(45deg);"></div>
+      <span class="dval" id="isoVal">400</span>
+      <span class="dtap">▲ TAP</span>
+    </div>
+
+    <div class="mode-strip" id="modes">
+      <span class="mpill active" data-mode="RECON">RECON</span>
+      <span class="mpill" data-mode="BURST">BURST</span>
+      <span class="mpill" data-mode="STEALTH">STEALTH</span>
+      <span class="mpill" data-mode="THERMAL">THERMAL</span>
+      <span class="mpill" data-mode="PANO">PANO</span>
+      <span class="mpill" data-mode="HDR">HDR</span>
+    </div>
+
+    <div class="dial-unit">
+      <span class="dlbl">WB</span>
+      <div class="dial" id="dwb" style="transform:rotate(-30deg);"></div>
+      <span class="dval" id="wbVal">AWB</span>
+      <span class="dtap">▲ TAP</span>
+    </div>
+  </div>
+
+  <!-- SHUTTER ROW -->
+  <div class="shutter-row">
+    <div class="shutter-left">
+      <div class="filmstrip">
+        <div class="ff"><div class="ff-inner" style="background:linear-gradient(135deg,rgba(0,30,50,.7),rgba(20,5,40,.7));"></div></div>
+        <div class="ff"><div class="ff-inner"></div></div>
+        <div class="ff latest" id="ff-latest"><div class="ff-inner"></div></div>
+      </div>
+      <span class="fcount" id="fcount">0247</span>
+    </div>
+
+    <div class="shutter-wrap">
+      <div class="shutter-orbit"></div>
+      <button class="shutter-btn" id="shutter" aria-label="ถ่ายภาพ"></button>
+    </div>
+
+    <div class="shutter-stats">
+      <div class="sstat">
+        <span class="sslbl">SHOTS LEFT</span>
+        <span class="ssval fir" id="sleft">177</span>
+      </div>
+      <div class="sstat">
+        <span class="sslbl">WRITE</span>
+        <span class="ssval" style="font-size:10px;">320 MB/s</span>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- PANEL BACKDROP -->
+<div class="panel-backdrop" id="panelBackdrop" onclick="closeAllPanels()"></div>
+
+<!-- ISO PANEL -->
+<div class="dial-panel" id="isoPanel">
+  <div class="dp-title"><span>◈ ISO SENSITIVITY</span><span class="dp-close" onclick="closeAllPanels()">✕ ปิด</span></div>
+  <div class="dp-slider-row">
+    <span class="dp-slabel">ISO</span>
+    <input type="range" class="dp-slider" id="isoSlider" min="0" max="7" step="1" value="3">
+    <span class="dp-sval" id="isoSliderVal">400</span>
+  </div>
+  <div class="dp-pills" id="isoPills">
+    <span class="dp-pill" data-iso="0">50</span><span class="dp-pill" data-iso="1">100</span>
+    <span class="dp-pill" data-iso="2">200</span><span class="dp-pill active" data-iso="3">400</span>
+    <span class="dp-pill" data-iso="4">800</span><span class="dp-pill" data-iso="5">1600</span>
+    <span class="dp-pill" data-iso="6">3200</span><span class="dp-pill" data-iso="7">6400</span>
+  </div>
+</div>
+
+<!-- WB PANEL -->
+<div class="dial-panel" id="wbPanel">
+  <div class="dp-title"><span>◈ WHITE BALANCE</span><span class="dp-close" onclick="closeAllPanels()">✕ ปิด</span></div>
+  <div class="dp-slider-row">
+    <span class="dp-slabel">TEMP</span>
+    <input type="range" class="dp-slider" id="wbSlider" min="0" max="4" step="1" value="0">
+    <span class="dp-sval" id="wbSliderVal">AWB</span>
+  </div>
+  <div class="dp-pills" id="wbPills">
+    <span class="dp-pill active" data-wb="0">AWB</span>
+    <span class="dp-pill" data-wb="1">☀ DAY</span>
+    <span class="dp-pill" data-wb="2">☁ CLOUD</span>
+    <span class="dp-pill" data-wb="3">◉ TUNGSTEN</span>
+    <span class="dp-pill" data-wb="4">◎ CANDLE</span>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+//  NEXUS-ΩX v6.1  —  ENGINE
+// ═══════════════════════════════════════════════════════
+
+// ── PARTICLE CANVAS ─────────────────────────────────────
+(function(){
+  const cv = document.getElementById('globalCanvas');
+  const cx = cv.getContext('2d');
+  let W, H, pts = [];
+  function resize(){
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    pts = [];
+    const n = Math.min(40, Math.floor(W*H/15000));
+    for(let i=0;i<n;i++) pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,r:Math.random()*1.1+.3});
+  }
+  resize(); window.addEventListener('resize',resize);
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    const t = Date.now()*.001;
+    for(const p of pts){
+      p.x=(p.x+p.vx+W)%W; p.y=(p.y+p.vy+H)%H;
+      const a=.07+.1*Math.sin(t+p.x*.01);
+      cx.beginPath(); cx.arc(p.x,p.y,p.r,0,6.28);
+      cx.fillStyle=`rgba(0,245,196,${a})`; cx.fill();
+    }
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<90){cx.strokeStyle=`rgba(0,245,196,${.05*(1-d/90)})`;cx.lineWidth=.5;cx.beginPath();cx.moveTo(pts[i].x,pts[i].y);cx.lineTo(pts[j].x,pts[j].y);cx.stroke();}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── STATE ───────────────────────────────────────────────
+let stream=null, facingMode='environment';
+let shots=0, sleft=999;
+let recStart=null, recTimer=null;
+let zoomLevel=1, zoomTrack=null;
+let isoValues=[50,100,200,400,800,1600,3200,6400], isoIdx=3;
+let wbLabels=['AWB','☀','☁','◉','◎'], wbIdx=0;
+let wbHues=[0,20,-20,40,60];
+let captureMode='RECON';
+const modes=['RECON','BURST','STEALTH','THERMAL','PANO','HDR'];
+let frameCount=0, fpsTimer=0, fps=0;
+
+// ── CLOCK ───────────────────────────────────────────────
+function clk(){
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+}
+setInterval(clk,1000); clk();
+
+// ── HISTOGRAM ───────────────────────────────────────────
+(function(){
+  const h=document.getElementById('hist');
+  const d=[.2,.5,.8,1,.9,.7,.55,.4,.3,.2,.15,.1];
+  for(let i=0;i<12;i++){
+    const b=document.createElement('div'); b.className='hb';
+    b.style.cssText=`height:${d[i]*42}px;background:linear-gradient(to top,rgba(255,100,100,${d[i]}),rgba(80,200,80,${d[i]*.9}),rgba(80,160,255,${d[i]*.8}));`;
+    h.appendChild(b);
+  }
+})();
+
+// ── NEURAL GRID ─────────────────────────────────────────
+(function(){
+  const g=document.getElementById('neural');
+  for(let i=0;i<15;i++){const c=document.createElement('div');c.className='ng-c';g.appendChild(c);}
+  function anim(){
+    const cs=g.querySelectorAll('.ng-c');
+    cs.forEach(c=>c.classList.remove('act','hot'));
+    for(let i=0;i<4+Math.floor(Math.random()*4);i++){
+      const idx=Math.floor(Math.random()*cs.length);
+      cs[idx].classList.add(Math.random()>.85?'hot':'act');
+    }
+    const conf=(95+Math.random()*4.5).toFixed(1);
+    document.getElementById('conf').textContent=conf;
+    document.getElementById('neuralConf').textContent=conf;
+    document.getElementById('chipAI').textContent='◈ NEURAL '+conf+'%';
+    document.getElementById('aiPct').textContent=conf+'%';
+  }
+  anim(); window._animNeural=anim; setInterval(anim,1500);
+})();
+
+// ── AF ──────────────────────────────────────────────────
+(function(){
+  const ids=['af00','af01','af02','af10','af11','af12'];
+  function pulse(){
+    ids.forEach(id=>document.getElementById(id).classList.remove('active'));
+    const a=['af11'];
+    if(Math.random()>.5) a.push(ids[Math.floor(Math.random()*ids.length)]);
+    a.forEach(id=>document.getElementById(id).classList.add('active'));
+    document.getElementById('targetCount').textContent=a.length+' TARGETS LOCKED';
+  }
+  pulse(); setInterval(pulse,2200);
+})();
+
+// ── EV SIMULATION ───────────────────────────────────────
+(function(){
+  const vals=[-1.5,-1,-.7,-.3,0,.3,.7,1,1.3]; let i=4;
+  setInterval(()=>{
+    i=Math.max(0,Math.min(vals.length-1,i+(Math.random()>.5?1:-1)));
+    const ev=vals[i],s=(ev>=0?'+':'')+ev.toFixed(1);
+    document.getElementById('chipEV').textContent='EV '+s;
+    const el=document.getElementById('evVal'); el.textContent=s;
+    el.className='ival '+(ev>.6?'over':ev<-.6?'under':'ok');
+    document.getElementById('expPtr').style.top=(25+(ev+1.5)/3*50)+'%';
+  },2800);
+})();
+
+// ── CAMERA ──────────────────────────────────────────────
+async function initCamera(){
+  document.getElementById('permScreen').style.display='none';
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:facingMode},width:{ideal:3840},height:{ideal:2160}},audio:false
+    });
+    const v=document.getElementById('camFeed'); v.srcObject=stream;
+    v.onloadedmetadata=()=>{
+      v.play().catch(()=>{});
+      v.style.opacity=1;
+      document.querySelector('.vf-env').style.opacity='0';
+      document.querySelector('.vf-hex').style.opacity='0';
+      const t=stream.getVideoTracks()[0]; zoomTrack=t;
+      const s=t.getSettings();
+      document.getElementById('resLabel').textContent=(s.width||'--')+' × '+(s.height||'--');
+      document.getElementById('facingLabel').textContent=facingMode==='user'?'FRONT CAM':'REAR CAM';
+      startFPS(v);
+    };
+    if(!recStart){
+      recStart=Date.now();
+      recTimer=setInterval(()=>{
+        const d=Date.now()-recStart;
+        const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);
+        const p=v=>String(v).padStart(2,'0');
+        document.getElementById('recStatus').innerHTML=`<span class="recdot"></span>REC · ${p(h)}:${p(m)}:${p(s)}`;
+      },1000);
+    }
+    gpsLoop();
+  }catch(e){
+    document.getElementById('permScreen').style.display='flex';
+    console.warn('Camera:',e);
+  }
+}
+function flipCamera(){ facingMode=facingMode==='environment'?'user':'environment'; initCamera(); }
+function startFPS(v){
+  const lp=(ts)=>{
+    frameCount++;
+    if(ts-fpsTimer>1000){fps=frameCount;frameCount=0;fpsTimer=ts;document.getElementById('fpsLabel').textContent=fps+' FPS · LIVE';}
+    requestAnimationFrame(lp);
+  }; requestAnimationFrame(lp);
+}
+function gpsLoop(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p=>{
+    const la=p.coords.latitude,lo=p.coords.longitude;
+    const s=Math.abs(la).toFixed(4)+'°'+(la>=0?'N':'S')+' '+Math.abs(lo).toFixed(4)+'°'+(lo>=0?'E':'W');
+    document.getElementById('gpsLabel').textContent=s;
+    document.getElementById('coordsbar').textContent=s;
+  },()=>{});
+}
+
+// ── SHUTTER ─────────────────────────────────────────────
+document.getElementById('shutter').addEventListener('click',()=>{
+  shots++; sleft=Math.max(0,sleft-1);
+  document.getElementById('sleft').textContent=String(sleft).padStart(3,'0');
+  document.getElementById('shotcount').textContent='SHOT '+String(shots).padStart(4,'0');
+  document.getElementById('fcount').textContent=String(247+shots).padStart(4,'0');
+  firePulse();
+  const v=document.getElementById('camFeed');
+  if(v.readyState>=2){
+    const c=document.getElementById('captureCanvas');
+    c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
+    c.getContext('2d').drawImage(v,0,0);
+    const gt=document.getElementById('galleryThumb');
+    document.getElementById('thumbImg').src=c.toDataURL('image/jpeg',.6);
+    gt.style.display='block';
+    const ff=document.getElementById('ff-latest');
+    ff.style.background='rgba(0,245,196,0.3)';
+    setTimeout(()=>ff.style.background='',200);
+  }
+});
+
+function firePulse(){
+  const p=document.getElementById('aiPulse');
+  p.classList.remove('fire'); void p.offsetWidth; p.classList.add('fire');
+}
+
+// ── MODE PILLS ──────────────────────────────────────────
+document.getElementById('modes').addEventListener('click',e=>{
+  const pill=e.target.closest('.mpill'); if(!pill) return;
+  selectMode(pill);
+});
+document.getElementById('modes').addEventListener('touchend',e=>{
+  const pill=e.target.closest('.mpill'); if(!pill) return;
+  e.preventDefault(); selectMode(pill);
+},{passive:false});
+
+function selectMode(el){
+  document.querySelectorAll('.mpill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  captureMode=el.dataset.mode||el.textContent;
+  applyLiveFilter(captureMode);
+  const mf=document.getElementById('modeFlash');
+  mf.textContent=captureMode; mf.classList.remove('show'); void mf.offsetWidth; mf.classList.add('show');
+  firePulse(); if(window._animNeural) window._animNeural();
+}
+
+function applyLiveFilter(mode){
+  const v=document.getElementById('camFeed');
+  const f={RECON:'brightness(1) saturate(1.1)',BURST:'brightness(1.05) contrast(1.1)',STEALTH:'brightness(0.75) saturate(0.2)',THERMAL:'sepia(0.8) hue-rotate(280deg)',PANO:'brightness(1) saturate(1.2)',HDR:'brightness(1.1) contrast(1.25) saturate(1.3)'};
+  v.style.filter=f[mode]||'none';
+  document.getElementById('edgeCanvas').classList.toggle('active',mode==='RECON'||mode==='STEALTH');
+}
+
+// ── SWIPE GESTURES ON VIEWFINDER ────────────────────────
+(function(){
+  let tx,ty,tt; const vf=document.getElementById('vf');
+  vf.addEventListener('touchstart',e=>{
+    if(e.target.closest('#flipBtn,#zoomIndicator,#galleryThumb,#permScreen')) return;
+    tx=e.touches[0].clientX; ty=e.touches[0].clientY; tt=Date.now();
+  },{passive:true});
+  vf.addEventListener('touchend',e=>{
+    if(tx===undefined) return;
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    const dt=Date.now()-tt, adx=Math.abs(dx), ady=Math.abs(dy);
+    if(dt>380||(adx<40&&ady<40)) return;
+    if(adx>ady*1.4){
+      // horizontal → change mode
+      const pills=[...document.querySelectorAll('.mpill')];
+      const cur=pills.findIndex(p=>p.classList.contains('active'));
+      selectMode(pills[(cur+(dx<0?1:-1)+modes.length)%modes.length]);
+    } else if(ady>adx*1.4){
+      nudgeZoom(dy<0?1:-1);
+    }
+  },{passive:true});
+  const hint=document.createElement('div');
+  hint.className='swipe-hint';
+  hint.textContent='← ปัดเปลี่ยนโหมด  •  ↕ ปัดซูม →';
+  vf.appendChild(hint); setTimeout(()=>hint.remove(),7000);
+})();
+
+// ── ZOOM ────────────────────────────────────────────────
+const zoomSteps=[1,1.5,2,3,4,6,8];
+function nudgeZoom(dir){
+  let ci=zoomSteps.reduce((b,v,i)=>Math.abs(v-zoomLevel)<Math.abs(zoomSteps[b]-zoomLevel)?i:b,0);
+  ci=Math.max(0,Math.min(zoomSteps.length-1,ci+dir));
+  zoomLevel=zoomSteps[ci];
+  document.getElementById('zoomFill').style.height=(zoomLevel/8*100)+'%';
+  const lbl=zoomLevel===1?'1×':zoomLevel+'×';
+  document.getElementById('zoomLbl').textContent=lbl;
+  const zf=document.getElementById('zoomFlash');
+  zf.textContent='ZOOM '+lbl; zf.classList.remove('show'); void zf.offsetWidth; zf.classList.add('show');
+  if(zoomTrack){
+    const caps=zoomTrack.getCapabilities?zoomTrack.getCapabilities():{};
+    if(caps.zoom) zoomTrack.applyConstraints({advanced:[{zoom:Math.min(zoomLevel,caps.zoom.max)}]}).catch(()=>{});
+  }
+}
+// Zoom bar tap buttons
+document.getElementById('zoomUpBtn').addEventListener('click',e=>{e.stopPropagation();nudgeZoom(1);});
+document.getElementById('zoomDnBtn').addEventListener('click',e=>{e.stopPropagation();nudgeZoom(-1);});
+document.getElementById('zoomUpBtn').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();nudgeZoom(1);},{passive:false});
+document.getElementById('zoomDnBtn').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();nudgeZoom(-1);},{passive:false});
+
+// ── DIAL PANELS ─────────────────────────────────────────
+function closeAllPanels(){
+  document.querySelectorAll('.dial-panel').forEach(p=>p.classList.remove('open'));
+  document.getElementById('panelBackdrop').classList.remove('active');
+}
+window.closeAllPanels=closeAllPanels;
+function openPanel(id){closeAllPanels();document.getElementById(id).classList.add('open');document.getElementById('panelBackdrop').classList.add('active');}
+
+function makeTappable(el,panelId){
+  let ts=0,moved=false;
+  el.addEventListener('touchstart',e=>{ts=Date.now();moved=false;},{passive:true});
+  el.addEventListener('touchmove',()=>{moved=true;},{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!moved&&Date.now()-ts<400){
+      e.preventDefault();e.stopPropagation();
+      openPanel(panelId);
+    }
+  },{passive:false});
+  el.addEventListener('click',e=>{e.stopPropagation();openPanel(panelId);});
+}
+makeTappable(document.getElementById('diso'),'isoPanel');
+makeTappable(document.getElementById('dwb'),'wbPanel');
+
+// ── ISO ─────────────────────────────────────────────────
+const isoSlider=document.getElementById('isoSlider');
+const isoSliderVal=document.getElementById('isoSliderVal');
+function syncISO(idx){
+  isoIdx=idx;
+  const val=isoValues[idx];
+  isoSliderVal.textContent=val;
+  isoSlider.value=idx;
+  isoSlider.style.setProperty('--pct',(idx/7*100)+'%');
+  document.getElementById('isoVal').textContent=val;
+  document.getElementById('ribbonISO').textContent=val;
+  document.querySelectorAll('#isoPills .dp-pill').forEach(p=>p.classList.toggle('active',parseInt(p.dataset.iso)===idx));
+  const v=document.getElementById('camFeed');
+  const baseFilter=(v.style.filter||'').replace(/brightness\([^)]+\)/g,'').trim();
+  v.style.filter=`brightness(${(0.6+idx/7*1.4).toFixed(2)}) `+baseFilter;
+  // grain
+  const g=document.getElementById('isoGrain');
+  g.style.opacity=Math.max(0,(idx-3)/4*.5);
+}
+isoSlider.addEventListener('input',()=>syncISO(parseInt(isoSlider.value)));
+document.getElementById('isoPills').addEventListener('click',e=>{if(e.target.dataset.iso!=null)syncISO(parseInt(e.target.dataset.iso));});
+isoSlider.style.setProperty('--pct',(3/7*100)+'%');
+
+// ── WB ──────────────────────────────────────────────────
+const wbSlider=document.getElementById('wbSlider');
+const wbSliderVal=document.getElementById('wbSliderVal');
+const wbDspLabels=['AWB','DAYLIGHT','CLOUDY','TUNGSTEN','CANDLE'];
+function syncWB(idx){
+  wbIdx=idx;
+  wbSliderVal.textContent=wbDspLabels[idx];
+  wbSlider.value=idx;
+  wbSlider.style.setProperty('--pct',(idx/4*100)+'%');
+  document.getElementById('wbVal').textContent=wbLabels[idx];
+  document.querySelectorAll('#wbPills .dp-pill').forEach(p=>p.classList.toggle('active',parseInt(p.dataset.wb)===idx));
+  const v=document.getElementById('camFeed');
+  const base=(v.style.filter||'').replace(/hue-rotate\([^)]+\)/g,'').trim();
+  v.style.filter=base+` hue-rotate(${wbHues[idx]}deg)`;
+}
+wbSlider.addEventListener('input',()=>syncWB(parseInt(wbSlider.value)));
+document.getElementById('wbPills').addEventListener('click',e=>{if(e.target.dataset.wb!=null)syncWB(parseInt(e.target.dataset.wb));});
+wbSlider.style.setProperty('--pct','0%');
+
+// ── AUTO-START ───────────────────────────────────────────
+navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices().then(ds=>{
+  if(ds.some(d=>d.kind==='videoinput'&&d.label)) initCamera();
+}).catch(()=>{});
+</script>
+</body>
+</html>
